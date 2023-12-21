@@ -1,0 +1,14 @@
+﻿{
+  "ID": "0cd68088246649a38205c7641df39db0",
+  "ActionKeyword": "timer",
+  "IsGlobal": false,
+  "Name": "Timer",
+  "Author": "Corey Hayward",
+  "Version": "0.1.0",
+  "Language": "csharp",
+  "Website": "https://github.com/CoreyHayward/PowerToys-Run-Timer",
+  "IcoPathDark": "Images\\Timer.dark.png",
+  "IcoPathLight": "Images\\Timer.light.png",
+  "ExecuteFileName": "Community.PowerToys.Run.Plugin.Timers.dll",
+  "DynamicLoading": true
+}
