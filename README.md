@@ -18,7 +18,7 @@ Simple [PowerToys Run](https://learn.microsoft.com/windows/powertoys/run) plugin
 ## Usage
 ### Setting Timers
 - Open PowerToys Run
-- Input: "timer {time}"
+- Input: "timer {time} {description (optional)}"
 - Select the result (ENTER)
 - Timer is set and notification is raised when timer is complete
 
