@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Xml.Linq;
 using TimeSpanParserUtil;
 using Wox.Plugin;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace Community.PowerToys.Run.Plugin.Timers;
 public class TimerResultService
@@ -18,7 +19,6 @@ public class TimerResultService
     {
         ArgumentNullException.ThrowIfNull(pluginContext);
         _pluginContext = pluginContext;
-
         _pluginContext.API.ThemeChanged += (_, theme) => UpdateTheme(theme);
         UpdateTheme(_pluginContext.API.GetCurrentTheme());
     }
@@ -43,7 +43,6 @@ public class TimerResultService
         }
 
         return GetCreateTimerResult(query.Search);
-
     }
 
     private List<Result> GetRunningTimersResults(string search)
@@ -53,11 +52,15 @@ public class TimerResultService
         {
             var timer = _timers[i];
             var timerInterval = TimeSpan.FromMilliseconds(timer.Interval);
+            var resultTitle = string.IsNullOrWhiteSpace(timer.Title)
+                ? $"{i + 1}: {Humanize(timerInterval).Singularize(false)} timer"
+                : $"{i + 1}: {timer.Title} ({Humanize(timerInterval).Singularize(false)} timer)";
+
             timerResults.Add(new Result()
             {
                 QueryTextDisplay = search,
-                Title = $"{i + 1} ({Humanize(timerInterval).Singularize(false)} timer): {Humanize(timer.TimeLeft)} left",
-                SubTitle = "",
+                Title = resultTitle,
+                SubTitle = $"{Humanize(timer.TimeLeft)} left",
                 IcoPath = _iconPath,
                 Action = _ => true,
                 ContextData = timer,
@@ -67,14 +70,14 @@ public class TimerResultService
         return timerResults;
     }
 
-    public List<Result> GetCreateTimerResult(string search)
+    public List<Result> GetCreateTimerResult(string query)
     {
-        search = search.Trim();
-        if (!TimeSpanParser.TryParse(search, out var timeSpan) || timeSpan <= TimeSpan.Zero)
+        query = query.Trim();
+        if (!TimeSpanParser.TryParse(query, out var timeSpan) || timeSpan <= TimeSpan.Zero)
         {
             var parsingErrorResult = new Result()
             {
-                QueryTextDisplay = search,
+                QueryTextDisplay = query,
                 Title = "Parsing error",
                 SubTitle = "Unable to parse the provided time. Try using one of the following formats: 30s, 15m or 1h or 2h30m",
                 IcoPath = _iconPath,
@@ -84,15 +87,16 @@ public class TimerResultService
             return [parsingErrorResult];
         }
 
+        var timerTitle = ParseTimerTitleFromQuery(query, timeSpan);
         var result = new Result()
         {
-            QueryTextDisplay = search,
+            QueryTextDisplay = query,
             Title = "Start timer",
             SubTitle = $"Starts a {Humanize(timeSpan).Singularize(false)} timer.",
             IcoPath = _iconPath,
             Action = _ =>
             {
-                var timer = new TimerPlus(timeSpan);
+                var timer = new TimerPlus(timeSpan, timerTitle);
                 timer.AutoReset = false;
                 timer.Elapsed += Timer_Elapsed;
                 timer.Start();
@@ -110,7 +114,14 @@ public class TimerResultService
             timer.Dispose();
 
             _timers.Remove(timer);
-            _pluginContext!.API.ShowNotification($"{Humanize(timeSpan).Singularize(false)} timer elapsed.");
+            if (string.IsNullOrWhiteSpace(timer.Title))
+            {
+                _pluginContext!.API.ShowNotification($"{Humanize(timeSpan).Singularize(false)} timer elapsed.");
+            }
+            else
+            {
+                _pluginContext!.API.ShowNotification(timer.Title, $"{Humanize(timeSpan).Singularize(false)} timer elapsed.");
+            }
         }
     }
 
@@ -137,6 +148,24 @@ public class TimerResultService
 
         return [deleteTimer];
     }
+
+    private static string ParseTimerTitleFromQuery(string query, TimeSpan timeSpan)
+    {
+        var words = query!.Split(' ');
+        for (var i = words.Length - 1; i >= 0; i--)
+        {
+            var substring = string.Join(' ', words[0..i]);
+            if (TimeSpanParser.TryParse(substring, out var ts) && ts == timeSpan)
+            {
+                continue;
+            }
+
+            return string.Join(' ', words[(i + 1)..]);
+        }
+
+        return string.Empty;
+    }
+
     private static string Humanize(TimeSpan ts)
         => ts.Humanize(precision: 3, minUnit: Humanizer.Localisation.TimeUnit.Second);
 }

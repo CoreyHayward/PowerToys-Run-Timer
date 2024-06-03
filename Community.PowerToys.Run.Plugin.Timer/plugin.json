@@ -4,7 +4,7 @@
   "IsGlobal": false,
   "Name": "Timer",
   "Author": "Corey Hayward",
-  "Version": "0.1.0",
+  "Version": "0.2.0",
   "Language": "csharp",
   "Website": "https://github.com/CoreyHayward/PowerToys-Run-Timer",
   "IcoPathDark": "Images\\Timer.dark.png",

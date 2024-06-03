@@ -7,16 +7,20 @@
 public class TimerPlus : System.Timers.Timer
 {
     private DateTime _dueTime;
+    public readonly string Title;
+    public TimeSpan TimeLeft => TimeSpan.FromMilliseconds((_dueTime - DateTime.Now).TotalMilliseconds);
 
-    public TimerPlus(TimeSpan timeSpan) : base(timeSpan) => Elapsed += ElapsedAction;
+    public TimerPlus(TimeSpan timeSpan, string title = "") : base(timeSpan)
+    {
+        Elapsed += ElapsedAction;
+        Title = title;
+    }
 
     protected new void Dispose()
     {
         Elapsed -= ElapsedAction;
         base.Dispose();
     }
-
-    public TimeSpan TimeLeft => TimeSpan.FromMilliseconds((_dueTime - DateTime.Now).TotalMilliseconds);
 
     public new void Start()
     {
