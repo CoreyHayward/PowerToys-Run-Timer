@@ -30,6 +30,7 @@ public class TimerLog
 
     public void RemoveTimerLog(TimerLogItem timer)
     {
+        timer.RemoveTimer();
         _timerLogItems.Remove(timer);
     }
 
@@ -185,6 +186,11 @@ public class TimerLogItem
 
     public void RemoveTimer()
     {
+        if (timer != null)
+        {
+            timer.Stop();
+            timer.Dispose();
+        }
         timer = null;
     }
 
