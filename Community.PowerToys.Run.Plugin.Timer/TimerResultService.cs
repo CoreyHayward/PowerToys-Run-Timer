@@ -12,6 +12,7 @@ namespace Community.PowerToys.Run.Plugin.Timers;
 public class TimerResultService
 {
     private readonly List<TimerPlus> _timers = [];
+    private readonly TimerLog _timerLog;
     private readonly PluginInitContext _pluginContext;
     private string _iconPath = "Images/Timer.light.png";
 
@@ -21,6 +22,7 @@ public class TimerResultService
         _pluginContext = pluginContext;
         _pluginContext.API.ThemeChanged += (_, theme) => UpdateTheme(theme);
         UpdateTheme(_pluginContext.API.GetCurrentTheme());
+        _timerLog = new TimerLog(_pluginContext);
     }
 
     private void UpdateTheme(Theme theme)
@@ -48,19 +50,14 @@ public class TimerResultService
     private List<Result> GetRunningTimersResults(string search)
     {
         var timerResults = new List<Result>();
-        for (var i = 0; i < _timers.Count; i++)
+        for (var i = 0; i < _timerLog.Count; i++)
         {
-            var timer = _timers[i];
-            var timerInterval = TimeSpan.FromMilliseconds(timer.Interval);
-            var resultTitle = string.IsNullOrWhiteSpace(timer.Title)
-                ? $"{i + 1}: {Humanize(timerInterval).Singularize(false)} timer"
-                : $"{i + 1}: {timer.Title} ({Humanize(timerInterval).Singularize(false)} timer)";
-
+            var timer = _timerLog[i];
             timerResults.Add(new Result()
             {
                 QueryTextDisplay = search,
-                Title = resultTitle,
-                SubTitle = $"{Humanize(timer.TimeLeft)} left",
+                Title = timer.GetTitle(),
+                SubTitle = timer.GetSubTitle(),
                 IcoPath = _iconPath,
                 Action = _ => true,
                 ContextData = timer,
@@ -75,16 +72,21 @@ public class TimerResultService
         query = query.Trim();
         if (!TimeSpanParser.TryParse(query, out var timeSpan) || timeSpan <= TimeSpan.Zero)
         {
-            var parsingErrorResult = new Result()
+            // start a count "UP" timer
+            var resultUp = new Result()
             {
                 QueryTextDisplay = query,
-                Title = "Parsing error",
-                SubTitle = "Unable to parse the provided time. Try using one of the following formats: 30s, 15m or 1h or 2h30m",
+                Title = "Start timer",
+                SubTitle = $"Starts an ongoing timer.",
                 IcoPath = _iconPath,
-                Action = _ => true,
+                Action = _ =>
+                {
+                    _timerLog.AddTimer(query);
+                    return true;
+                }
             };
 
-            return [parsingErrorResult];
+            return [resultUp];
         }
 
         var timerTitle = ParseTimerTitleFromQuery(query, timeSpan);
@@ -96,39 +98,53 @@ public class TimerResultService
             IcoPath = _iconPath,
             Action = _ =>
             {
-                var timer = new TimerPlus(timeSpan, timerTitle);
-                timer.AutoReset = false;
-                timer.Elapsed += Timer_Elapsed;
-                timer.Start();
-                _timers.Add(timer);
+                _timerLog.AddTimer(timeSpan, timerTitle);
                 return true;
             }
         };
 
         return [result];
-
-        void Timer_Elapsed(object? sender, ElapsedEventArgs e)
-        {
-            var timer = (TimerPlus)sender!;
-            var timeSpan = TimeSpan.FromMilliseconds(timer.Interval);
-            timer.Dispose();
-
-            _timers.Remove(timer);
-            if (string.IsNullOrWhiteSpace(timer.Title))
-            {
-                _pluginContext!.API.ShowNotification($"{Humanize(timeSpan).Singularize(false)} timer elapsed.");
-            }
-            else
-            {
-                _pluginContext!.API.ShowNotification(timer.Title, $"{Humanize(timeSpan).Singularize(false)} timer elapsed.");
-            }
-        }
     }
 
     public List<ContextMenuResult> GetContextMenuResults(Result selectedResult)
     {
-        var timer = selectedResult.ContextData as TimerPlus;
+        var timer = selectedResult.ContextData as TimerLogItem;
         if (timer is null) return [];
+        List<ContextMenuResult> contexts = new List<ContextMenuResult>();
+        if (timer.IsRunning)
+        {
+            var pauseTimer = new ContextMenuResult()
+            {
+                Title = "Pause Timer (Ctrl+Space)",
+                Glyph = "\xE769",
+                FontFamily = "Segoe Fluent Icons,Segoe MDL2 Assets",
+                AcceleratorKey = Key.Space,
+                AcceleratorModifiers = ModifierKeys.Control,
+                Action = _ =>
+                {
+                    timer.PauseTimer();
+                    return true;
+                },
+            };
+            contexts.Add(pauseTimer);
+        }
+        else if (timer.IsPaused)
+        {
+            var resumeTimer = new ContextMenuResult()
+            {
+                Title = "Resume Timer (Ctrl+Space)",
+                Glyph = "\xE768",
+                FontFamily = "Segoe Fluent Icons,Segoe MDL2 Assets",
+                AcceleratorKey = Key.Space,
+                AcceleratorModifiers = ModifierKeys.Control,
+                Action = _ =>
+                {
+                    timer.ResumeTimer();
+                    return true;
+                },
+            };
+            contexts.Add(resumeTimer);
+        }
 
         var deleteTimer = new ContextMenuResult()
         {
@@ -139,14 +155,14 @@ public class TimerResultService
             AcceleratorModifiers = ModifierKeys.Control,
             Action = _ =>
             {
-                timer.Dispose();
-                _timers.Remove(timer);
+                _timerLog.RemoveTimerLog(timer);
                 _pluginContext.API.RemoveUserSelectedItem(selectedResult);
                 return true;
             },
         };
+        contexts.Add(deleteTimer);
 
-        return [deleteTimer];
+        return contexts;
     }
 
     private static string ParseTimerTitleFromQuery(string query, TimeSpan timeSpan)

@@ -6,11 +6,19 @@
 /// </summary>
 public class TimerPlus : System.Timers.Timer
 {
-    private DateTime _dueTime;
+    private DateTime? _dueTime;
+    private DateTime? _startTime;
     public readonly string Title;
-    public TimeSpan TimeLeft => TimeSpan.FromMilliseconds((_dueTime - DateTime.Now).TotalMilliseconds);
+    public TimeSpan TimeLeft => TimeSpan.FromMilliseconds((_dueTime - DateTime.Now)?.TotalMilliseconds ?? 0);
+    public TimeSpan TimeElapsed => TimeSpan.FromMilliseconds((_startTime - DateTime.Now)?.TotalMilliseconds ?? 0);
 
     public TimerPlus(TimeSpan timeSpan, string title = "") : base(timeSpan)
+    {
+        Elapsed += ElapsedAction;
+        Title = title;
+    }
+
+    public TimerPlus(string title = "") : base()
     {
         Elapsed += ElapsedAction;
         Title = title;
@@ -24,6 +32,7 @@ public class TimerPlus : System.Timers.Timer
 
     public new void Start()
     {
+        _startTime = DateTime.Now;
         _dueTime = DateTime.Now.AddMilliseconds(Interval);
         base.Start();
     }
