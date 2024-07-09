@@ -16,7 +16,7 @@ Simple [PowerToys Run](https://learn.microsoft.com/windows/powertoys/run) plugin
 - Open PowerToys
 
 ## Usage
-### Setting Timers
+### Setting Countdown Timers
 - Open PowerToys Run
 - Input: "timer {time} {description (optional)}"
 - Select the result (ENTER)
@@ -27,8 +27,14 @@ Simple [PowerToys Run](https://learn.microsoft.com/windows/powertoys/run) plugin
 - Minutes: 1m | 1 min | 1 minute
 - Hours: 1h | 1 hr | 1 hour
 
+### Setting Stopwatch Timers
+- Open PowerToys Run
+- Input: "timer {description (required)}"
+- Select the result (ENTER)
+- Timer will run until paused
+
 ### Viewing Active Timers
-![See active timers](/images/ActiveTimers.png)
+![See active timers](/images/ActiveTimers2.png)
 - Open PowerToys Run
 - Input: "timer"
 
