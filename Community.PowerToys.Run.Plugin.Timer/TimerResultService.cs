@@ -1,12 +1,9 @@
-﻿
-using Humanizer;
+﻿using Humanizer;
 using ManagedCommon;
 using System.Timers;
 using System.Windows.Input;
-using System.Xml.Linq;
 using TimeSpanParserUtil;
 using Wox.Plugin;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace Community.PowerToys.Run.Plugin.Timers;
 public class TimerResultService
@@ -35,14 +32,14 @@ public class TimerResultService
         }
     }
 
-    public List<Result> GetQueryResult(Query query)
+    public List<Result> GetQueryResult(Query query, Settings settings)
     {
         if (string.IsNullOrWhiteSpace(query.Search))
         {
             return GetRunningTimersResults(query.Search);
         }
 
-        return GetCreateTimerResult(query.Search);
+        return GetCreateTimerResult(query.Search, settings);
     }
 
     private List<Result> GetRunningTimersResults(string search)
@@ -70,10 +67,11 @@ public class TimerResultService
         return timerResults;
     }
 
-    public List<Result> GetCreateTimerResult(string query)
+    public List<Result> GetCreateTimerResult(string query, Settings settings)
     {
         query = query.Trim();
-        if (!TimeSpanParser.TryParse(query, out var timeSpan) || timeSpan <= TimeSpan.Zero)
+
+        if (!TimeSpanParser.TryParse(query, settings.TimeSpanParserOptions, out var timeSpan) || timeSpan <= TimeSpan.Zero)
         {
             var parsingErrorResult = new Result()
             {
